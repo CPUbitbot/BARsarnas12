@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sistem Manajemen Jadwal BASARNAS</title>
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --card: #ffffff;
+      --text: #1f2937;
+      --primary: #0b5ed7;
+      --accent: #ff7a18;
+      --border: #e5e7eb;
+      --success: #16a34a;
+      --danger: #dc2626;
+      --warning: #f59e0b;
+    }
+
+    body.dark {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --text: #e5e7eb;
+      --primary: #60a5fa;
+      --accent: #fb923c;
+      --border: #334155;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      transition: 0.3s;
+    }
+
+    header {
+      background: linear-gradient(135deg, var(--primary), #003f88);
+      color: white;
+      padding: 20px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .toggle {
+      background: rgba(255,255,255,0.15);
+      border: none;
+      color: white;
+      padding: 8px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+
+    main {
+      max-width: 1100px;
+      margin: 24px auto;
+      padding: 0 16px;
+      display: grid;
+      gap: 24px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 20px;
+      border: 1px solid var(--border);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+    }
+
+    h2 { color: var(--primary); margin-top: 0; }
+
+    label { display:block; margin-top:12px; font-weight:600; font-size:0.85rem; }
+
+    input, select, textarea {
+      width:100%;
+      margin-top:6px;
+      padding:10px;
+      border-radius:10px;
+      border:1px solid var(--border);
+      background:transparent;
+      color:var(--text);
+    }
+
+    button.primary {
+      margin-top:16px;
+      padding:12px;
+      width:100%;
+      border:none;
+      border-radius:12px;
+      background: linear-gradient(135deg, var(--accent), #ff9f43);
+      color:white;
+      font-weight:600;
+      cursor:pointer;
+    }
+
+    table { width:100%; border-collapse:collapse; margin-top:10px; }
+    th, td { padding:12px; border-bottom:1px solid var(--border); }
+    th { text-align:left; color:var(--primary); }
+
+    .badge {
+      padding:4px 10px;
+      border-radius:999px;
+      font-size:0.75rem;
+      font-weight:600;
+      color:white;
+      display:inline-block;
+    }
+
+    .aktif { background: var(--success); }
+    .selesai { background: #64748b; }
+    .darurat { background: var(--danger); }
+
+    .stat {
+      font-size:1.8rem;
+      font-weight:700;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Sistem Manajemen Jadwal BASARNAS</h1>
+    <button class="toggle" onclick="toggleMode()">🌙 / ☀️</button>
+  </header>
+
+  <main>
+    <!-- DASHBOARD PIMPINAN -->
+    <div class="grid">
+      <div class="card"><h3>Total Tugas</h3><div class="stat" id="total">0</div></div>
+      <div class="card"><h3>Aktif</h3><div class="stat" id="aktif">0</div></div>
+      <div class="card"><h3>Selesai</h3><div class="stat" id="selesai">0</div></div>
+      <div class="card"><h3>Darurat</h3><div class="stat" id="darurat">0</div></div>
+    </div>
+
+    <!-- FORM -->
+    <div class="card">
+      <h2>Tambah Jadwal / Tugas</h2>
+      <label>Nama Petugas</label>
+      <input id="petugas" />
+
+      <label>Jenis Tugas</label>
+      <select id="tugas">
+        <option>Siaga</option>
+        <option>Operasi SAR</option>
+        <option>Pelatihan</option>
+        <option>Administrasi</option>
+      </select>
+
+      <label>Status</label>
+      <select id="status">
+        <option value="aktif">Aktif</option>
+        <option value="selesai">Selesai</option>
+        <option value="darurat">Darurat</option>
+      </select>
+
+      <label>Tanggal</label>
+      <input type="date" id="tanggal" />
+
+      <label>Waktu</label>
+      <input type="time" id="waktu" />
+
+      <label>Keterangan</label>
+      <textarea id="keterangan"></textarea>
+
+      <button class="primary" onclick="tambahJadwal()">Simpan</button>
+    </div>
+
+    <!-- FILTER -->
+    <div class="card">
+      <h2>Filter Jadwal</h2>
+      <input id="filterPetugas" placeholder="Filter nama petugas" oninput="render()" />
+      <input type="date" id="filterTanggal" oninput="render()" />
+    </div>
+
+    <!-- TABEL -->
+    <div class="card">
+      <h2>Daftar Jadwal</h2>
+      <table>
+        <thead>
+          <tr><th>Petugas</th><th>Tugas</th><th>Status</th><th>Tanggal</th><th>Waktu</th><th>Keterangan</th></tr>
+        </thead>
+        <tbody id="tabel"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <script>
+    const data = JSON.parse(localStorage.getItem('jadwal') || '[]');
+
+    function toggleMode() {
+      document.body.classList.toggle('dark');
+      localStorage.setItem('mode', document.body.classList.contains('dark') ? 'dark' : 'light');
+    }
+
+    if (localStorage.getItem('mode') === 'dark') document.body.classList.add('dark');
+
+    function tambahJadwal() {
+      data.push({
+        petugas: petugas.value,
+        tugas: tugas.value,
+        status: status.value,
+        tanggal: tanggal.value,
+        waktu: waktu.value,
+        ket: keterangan.value
+      });
+      localStorage.setItem('jadwal', JSON.stringify(data));
+      render();
+    }
+
+    function render() {
+      const tbody = document.getElementById('tabel');
+      tbody.innerHTML = '';
+
+      const fp = filterPetugas.value.toLowerCase();
+      const ft = filterTanggal.value;
+
+      let count = { total:0, aktif:0, selesai:0, darurat:0 };
+
+      data.filter(d =>
+        (!fp || d.petugas.toLowerCase().includes(fp)) && (!ft || d.tanggal === ft)
+      ).forEach(d => {
+        count.total++;
+        count[d.status]++;
+        const row = tbody.insertRow();
+        row.innerHTML = `<td>${d.petugas}</td><td>${d.tugas}</td><td><span class="badge ${d.status}">${d.status}</span></td><td>${d.tanggal}</td><td>${d.waktu}</td><td>${d.ket}</td>`;
+      });
+
+      total.innerText = count.total;
+      aktif.innerText = count.aktif;
+      selesai.innerText = count.selesai;
+      darurat.innerText = count.darurat;
+    }
+
+    render();
+  </script>
+</body>
+</html>
